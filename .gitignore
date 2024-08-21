@@ -1,0 +1,9 @@
+Datasets/
+Testing.py
+f2testing.py
+flasktesting.py
+NonUS.npy
+NonUScoords.py
+EM(AllData(1monthdiff)(Firemonthonly))training.nc
+EM(HighLow(2x2)(1monthdiff)(Firemonthonly))training.nc
+Original Work/

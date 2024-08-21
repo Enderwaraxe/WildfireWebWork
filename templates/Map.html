@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+    <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
+<head>
+    <title>Wildfire Emission Mapping</title>
+    {{ header|safe }}
+</head>
+
+<style>
+    .container {
+      position: absolute;
+      border-width: 0;
+      padding: 0;
+    }
+    .selectors{
+        position: absolute;
+        left: 50px;
+        top: 50px;
+        z-index: 100000;
+    }
+</style>
+<body>
+    <div class = "container">
+        <div id="Map">
+            {{ body_html|safe }}
+            <script>
+                {{ script|safe }}
+            </script>
+            </div>
+    <div id="Selectors" class="selectors">
+
+    <select id="years" action="/switchOverlay" onchange="finalize()" type="submit">
+        <option value="{{selectedyear}}" selected>{{selectedyear}}</option>
+        {% for year in years %}
+        <option value="{{year}}">{{year}}</option>
+        {% endfor %}
+    </select>
+
+    <select id="months"  action="/switchOverlay" onchange= "finalize()" type="submit">
+        <option value="{{selectedmonth}}" selected>{{selectedmonth}}</option>
+        {% for month in months%}
+        <option value="{{month}}">{{month}}</option>
+        {% endfor %}
+    </select>
+
+    <select id="emissions"  action="/switchOverlay" onchange= "finalize()" type="submit">
+        <option value="{{selectedemission}}" selected>{{selectedemission}}</option>
+        {% for emission in emissions%}
+        <option value="{{emission}}">{{emission}}</option>
+        {% endfor %}
+    </select>
+
+    <select id="scale"  action="/switchOverlay" onchange= "finalize()" type="submit">
+        <option value="{{selectedscale}}" selected>{{selectedscale}}</option>
+        {% for scale in scales%}
+        <option value="{{scale}}">{{scale}}</option>
+        {% endfor %}
+    </select>
+    </div>
+
+
+</div>
+</body>
+<script>
+
+    function finalize(){
+    year = document.getElementById("years").value;
+    month = document.getElementById("months").value;
+    emission = document.getElementById("emissions").value;
+    scale = document.getElementById("scale").value;
+    location = window.location.origin + "/switchOverlay?year=" +year + "&month="+month+ "&emission=" +emission+"&scale="+scale;
+  }
+</script>
+
+</html>
