@@ -31,7 +31,7 @@ import folium
 import altair as alt
 
 
-Em = xr.open_dataset("Datasets\Original\CAEmdata_gridded(new).nc")
+Em = xr.open_dataset("Datasets\era5\CAdata_gridded(era5).nc")
 EF = {"CO2":[1403,109, 1492,116, 1571,64],
         "CO":[121.9,54, 79,57.4, 38.1, 31.6],
         "Methane":[5.67,2.57, 4.31,3.04, 2.48,1.82],

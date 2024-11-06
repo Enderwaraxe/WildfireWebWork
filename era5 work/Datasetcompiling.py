@@ -90,16 +90,16 @@ for year in range(2000, 2021):
             dataset = xr.open_dataset("Datasets/era5/Soilmoisture/NLDAS_VIC0125_M.A" + str(year) + "0" + str(month) +".020.nc")
         else: 
             dataset = xr.open_dataset("Datasets/era5/Soilmoisture/NLDAS_VIC0125_M.A" + str(year) + str(month) +".020.nc")
-        soilmoisture.append(dataset["SoilM_total"][0].values)
+        soilmoisture.append(dataset["SoilM_layer1"][0].values)
         time.append(dataset.time[0].values)
 time = np.array(time)
 soilmoisture = np.array(soilmoisture)
 print(time.shape)
 print(soilmoisture.shape)
 moisturedata = xr.Dataset(
-    data_vars=dict(SoilM_total=(['time','lat', 'lon'], soilmoisture)),
+    data_vars=dict(SoilM_layer1=(['time','lat', 'lon'], soilmoisture)),
     coords=dict(time=(time), lat=(lat), lon=(lon))
 )
 print(moisturedata)
-moisturedata.to_netcdf(path='./SoilMoistureNLDAS(2000-2020).nc')
+moisturedata.to_netcdf(path='./SoilMoistureNLDAS(2000-2020)(SoilM_layer1).nc')
 

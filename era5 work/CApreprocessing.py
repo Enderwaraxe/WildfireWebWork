@@ -30,10 +30,11 @@ import h5py
 import rioxarray as rio
 import rasterio
 from rasterio.enums import Resampling
+
 us = united_states.UnitedStates()
 
 DM = xr.open_dataset('Datasets\era5\GDM.nc')
-soilmoisture = xr.open_dataset("Datasets\era5\SoilMoistureNLDAS(2000-2020).nc")
+soilmoisture = xr.open_dataset("Datasets\era5\SoilMoistureNLDAS(2000-2020)(SoilM_layer1).nc")
 wind = xr.open_dataset("Datasets\era5\wind2000-2020.nc")#3600, 1801, global
 lai = xr.open_dataset("Datasets\era5\lai2000-2020.nc")#3600, 1801, global
 pressure = xr.open_dataset("Datasets\era5\pressure2000-2020.nc")#3600, 1801, global
@@ -69,7 +70,7 @@ pop = pop.reindex(lat=list(reversed(pop.lat)))
 
 # #Making the Global Emission dataset into a CA only Dataset
 datasets = [DM, soilmoisture, wind, wind, lai, lai, pressure, rain, radiation, temp, biomass, lightning, lightning, lightning, pop]
-varnames = ["DM","SoilM_total", "u10", "v10", "lai_hv", 'lai_lv', "sp", "tp", "ssrd", "t2m", "biomass", "density", "power_mean", "power_SD", "hdm"]
+varnames = ["DM","SoilM_layer1", "u10", "v10", "lai_hv", 'lai_lv', "sp", "tp", "ssrd", "t2m", "biomass", "density", "power_mean", "power_SD", "hdm"]
 # datasets = [DM, soilmoisture, wind, wind, lai, lai, pressure, rain, radiation, temp, biomass, pop]
 # varnames = ["DM", "swvl1", "u10", "v10", "lai_hv", 'lai_lv', "sp", "tp", "ssrd", "t2m", "biomass","hdm"]
 CAdatasets = []
@@ -78,6 +79,7 @@ baseline = None
 biomassid = 10
 popid = 14
 lightningids = [11,12,13]
+aggregate = False
 
 for index in range(0,len(datasets)):
     file = datasets[index]
@@ -100,6 +102,17 @@ except Exception:
     baseline = baseline.rio.set_spatial_dims(x_dim='lon',y_dim='lat')
 baseline = baseline.rio.write_crs('epsg:4326')
 
+scalefactor = 1
+if(aggregate):
+    scalefactor = 1/2
+new_width = int(baseline.rio.width * scalefactor)
+new_height = int(baseline.rio.height * scalefactor)
+baseline = baseline.rio.reproject(
+    baseline.rio.crs,
+    shape=(new_height, new_width),
+    resampling=Resampling.average)
+print(baseline)
+
 for index in range(0, len(datasets)):
     try:
         temp = CAdatasets[index].rio.set_spatial_dims(x_dim='longitude',y_dim='latitude')
@@ -107,7 +120,7 @@ for index in range(0, len(datasets)):
         temp = CAdatasets[index].rio.set_spatial_dims(x_dim='lon',y_dim='lat')
 
     new = temp.rio.write_crs('epsg:4326')
-    reprojected = new.rio.reproject_match(baseline)
+    reprojected = new.rio.reproject_match(baseline, Resampling = Resampling.average)
     CAdatasets[index] = reprojected
     # plt.matshow(reprojected[0])
     # plt.title(varnames[index])
@@ -123,8 +136,8 @@ for id in lightningids:
     CAdatasets[id] = xr.DataArray(extendedlightning, dims=['time', 'y', 'x'],  coords={'x':CAdatasets[id]['x'].values, 'y':CAdatasets[id]['y'].values, })
 
 extendedbiomass = CAdatasets[biomassid]
-for year in range(CAdatasets[biomassid]['time.year'][-1].values, baseline['time.year'][0].values):
-    extendedbiomass=np.concatenate([extendedbiomass,CAdatasets[biomassid][-1] ])
+for year in range(CAdatasets[biomassid]['time.year'][-1].values, baseline['time.year'][-1].values):
+    extendedbiomass=np.concatenate([extendedbiomass,[CAdatasets[biomassid][-1]] ])
 CAdatasets[biomassid] = xr.DataArray(extendedbiomass, dims=['time', 'y', 'x'],  coords={'x':CAdatasets[biomassid]['x'].values, 'y':CAdatasets[biomassid]['y'].values, })
 
 biomassmonthly = []
@@ -144,12 +157,12 @@ CAdatasets[popid] = xr.DataArray(popmonthly, dims=['time', 'y', 'x'],  coords={'
 
 templat = []
 templon = []
-for latind in range(0, len(CAdatasets[baselineId]['y'])):
+for latind in range(0, len(baseline['y'])):
    temptemplat = []
    temptemplon = []
-   for lonind in range(0, len(CAdatasets[baselineId]['x'])):
-      temptemplon.append(CAdatasets[baselineId]['x'][lonind].values)
-      temptemplat.append(CAdatasets[baselineId]['y'][latind].values)
+   for lonind in range(0, len(baseline['x'])):
+      temptemplon.append(baseline['x'][lonind].values)
+      temptemplat.append(baseline['y'][latind].values)
    templat.append(temptemplat)
    templon.append(temptemplon)   
       
@@ -158,11 +171,11 @@ monthcos = []
 lat = []
 lon = []     
 
-for time in range(0, len(CAdatasets[baselineId]['time.month'])):
-   tempsin = np.empty((len(CAdatasets[baselineId]['y']), len(CAdatasets[baselineId]['x'])))
-   tempsin.fill(np.sin((2*np.pi*int(CAdatasets[baselineId]['time.month'][time].values))/12))
-   tempcos = np.empty((len(CAdatasets[baselineId]['y']), len(CAdatasets[baselineId]['x'])))
-   tempcos.fill(np.cos((2*np.pi*int(CAdatasets[baselineId]['time.month'][time].values))/12))
+for time in range(0, len(baseline['time.month'])):
+   tempsin = np.empty((len(baseline['y']), len(baseline['x'])))
+   tempsin.fill(np.sin((2*np.pi*int(baseline['time.month'][time].values))/12))
+   tempcos = np.empty((len(baseline['y']), len(baseline['x'])))
+   tempcos.fill(np.cos((2*np.pi*int(baseline['time.month'][time].values))/12))
    monthsin.append(tempsin)
    monthcos.append(tempcos)
    lat.append(templat)
@@ -171,10 +184,10 @@ for time in range(0, len(CAdatasets[baselineId]['time.month'])):
 monthsin, monthcos, lat, lon = np.array(monthsin), np.array(monthcos), np.array(lat), np.array(lon)
 
 arrs = []
-arrs.append(np.reshape(monthsin, (-1, len(CAdatasets[baselineId]['x']),1)))
-arrs.append(np.reshape(monthcos, (-1, len(CAdatasets[baselineId]['x']),1)))
-arrs.append(np.reshape(lat, (-1, len(CAdatasets[baselineId]['x']),1)))
-arrs.append(np.reshape(lon, (-1, len(CAdatasets[baselineId]['x']),1)))
+arrs.append(np.reshape(monthsin, (-1, len(baseline['x']),1)))
+arrs.append(np.reshape(monthcos, (-1, len(baseline['x']),1)))
+arrs.append(np.reshape(lat, (-1, len(baseline['x']),1)))
+arrs.append(np.reshape(lon, (-1, len(baseline['x']),1)))
 
 for i in range(1,len(CAdatasets)):
     print(varnames[i])
@@ -187,12 +200,17 @@ final = np.concatenate(arrs, axis=2)
 final = np.reshape(final, (-1, len(baseline['y']), len(baseline['x']), len(arrs)))
 print(final.shape)
 
+Femissions = CAdatasets[0]
+
+
 timelen,latlen,lonlen,varlen = final.shape
 for latid in range(0,latlen):
     for lonid in range(0, lonlen):
-        result = us.from_coords(CAdatasets[baselineId].y[latid].values,CAdatasets[baselineId].x[lonid].values)
+        result = us.from_coords(baseline['y'][latid].values,baseline['x'][lonid].values)
+        print(result)
         if (len(result)==0 or result[0].abbr != "CA"):
             final[:, latid, lonid] = [np.nan]*varlen
+            Femissions[:, latid,lonid] = np.nan
 # for var in range(0, 15):
 #     plt.matshow(final[0, :, :, var])
 #     plt.show()
@@ -201,7 +219,7 @@ for latid in range(0,latlen):
 #     plt.show()
 # print(final)
 
-
+Femissions = Femissions.rename({'y':"lat", "x":"lon"})
 variables = []
 variables.append('month sin')
 variables.append('month cos')
@@ -209,9 +227,12 @@ variables.append('lat')
 variables.append('lon')
 for i in range(1, len(datasets)):
   variables.append(varnames[i])
-
+print(final.shape, Femissions.values.shape, baseline['y'].shape, baseline['x'].shape)
 CAdata = xr.Dataset(
-    data_vars=dict(data=(['time','lat', 'lon', 'variables'], final), DM=(['time', 'lat','lon'],CAdatasets[0])),
-coords=dict(time=(CAdatasets[baselineId].time.values), lat=(CAdatasets[baselineId]['y'].values), lon=(CAdatasets[baselineId]['x'].values),variables=(variables))
+    data_vars=dict(data=(['time','lat', 'lon', 'variables'], final), DM=(['time', 'lat','lon'],Femissions.values)),
+coords=dict(time=(baseline.time), lat=(baseline['y'].values), lon=(baseline['x'].values),variables=(variables))
 )
-CAdata.to_netcdf(path='./CAdata_gridded(era5).nc')
+if(aggregate):
+    CAdata.to_netcdf(path='./CAdata_gridded(era5)(2x2Aggregated).nc')
+else:
+    CAdata.to_netcdf(path='./CAdata_gridded(era5).nc')
